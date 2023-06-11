@@ -15,11 +15,12 @@ app.get('/lobby/users', function (req, res) {
 app.get('/lobby/register/:name', function (req, res) {
   const { name } = req.params
   if (!users[name]){
+    const id = uuid.v4()
     users[name] = {
       name,
-      id: uuid.v4()
+      id
     }
-    res.send({status: 200, message: "success"})
+    res.send({status: 200, data: id})
   }else {
     res.send({status: 409, message: "user already registered"})
   }
