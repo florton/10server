@@ -117,14 +117,14 @@ const processTurn = (matchId) => {
         match.attacker = defender.id
       }else{
         // game rule(s) lol
-        defender.hp -= attacker.choice === "0" ? 1 : 2
+        defender.health -= attacker.choice === "0" ? 1 : 2
       }
       attacker.prevChoice = attacker.choice
       attacker.choice = null
-      defender.prevChoice = attacker.choice
+      defender.prevChoice = defender.choice
       defender.choice = null
       match.turn += 1
-      if (defender.hp <= 0){
+      if (defender.health <= 0){
         //game over
       }
     }
