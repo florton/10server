@@ -22,12 +22,14 @@ const newMatch = (userId, challengerId) => ({
   players: {
     [userId] : {
       id: userId,
+      name: users[userId].name,
       health: 5,
       choice: null,
       prevChoice: null
     },
     [challengerId] : {
       id: challengerId,
+      name: users[challengerId].name,
       health: 5,
       choice: null,
       prevChoice: null
