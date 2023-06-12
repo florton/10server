@@ -9,11 +9,17 @@ const port = 3000
 const users = {}
 const matches = {}
 
-const newUser = (name) => ({
+const garbageCollectTimeout = 10000 // 10s
+
+let garbageCollectTimestamp = new Date()
+
+const newUser = (name, clientId) => ({
   name,
+  clientId,
   id: uuid.v4(),
   match: null,
-  challenges: []
+  challenges: [],
+  lastSeen: (new Date())
 })
 
 const newMatch = (userId, challengerId) => ({
@@ -38,15 +44,33 @@ const newMatch = (userId, challengerId) => ({
 })
 
 // Lobby
+const updateAndGarbageCollect = (clientId) => {
+  for (let user of Object.values(users)){
+    if (user.clientId == clientId){
+      user.lastSeen = (new Date())
+    }
+  }
+  if ((new Date()) - garbageCollectTimestamp > garbageCollectTimeout){
+    console.log("clear users")
+    garbageCollectTimestamp = new Date()
+    for (user of Object.values(users)){
+      if ((new Date()) - user.lastSeen > garbageCollectTimeout){
+        delete users[user.id]
+      }
+    }
+  }
+}
 
 app.get('/lobby/users', function (req, res) {
-  // todo garbage collect inactive users
   res.send({status: 200, data: Object.values(users)})
+  const clientId = req.headers.referer
+  updateAndGarbageCollect(clientId)
 })
 
 app.get('/lobby/register/:name', function (req, res) {
+  const clientId = req.headers.referer
   const { name } = req.params
-  const user = newUser(name)
+  const user = newUser(name, clientId)
   users[user.id] = user
   res.send({status: 200, data: user.id})
 })
@@ -82,6 +106,8 @@ app.get('/lobby/accept/:userId/:challengerId', function (req, res) {
 
 // Match
 app.get('/match/:matchId', function (req, res) {
+  // const clientId = req.headers.referer
+  // Todo check if user disconnected
   const { matchId } = req.params
   if(matches[matchId]){
     const filteredPlayers = {}
