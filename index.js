@@ -82,15 +82,17 @@ app.get('/lobby/accept/:userId/:challengerId', function (req, res) {
 app.get('/match/:matchId', function (req, res) {
   const { matchId } = req.params
   if(matches[matchId]){
+    const filteredPlayers = {}
+    Object.values(matches[matchId].players).forEach(
+      player => {filteredPlayers[player.id] = {
+        ...player,
+        // dont expose opponent choice to player
+        choice: player.choice === null ? false : true
+      }}
+    )
     const filteredMatch = {
       ...matches[matchId],
-      players: matches[matchId].players.map(
-        player => ({
-          ...player,
-          // dont expose opponent choice to player
-          choice: player.choice === null ? false : true
-        })
-      )
+      players: filteredPlayers
     }
     res.send({status: 200, data: filteredMatch})
   } else {
@@ -101,20 +103,21 @@ app.get('/match/:matchId', function (req, res) {
 const processTurn = (matchId) => {
   if (matches[matchId]){
     const match = matches[matchId]
-    const choices = match.players.map(
+    const choices = Object.values(match.players).map(
       player => player.choice
     )
     if (choices.filter(x => x).length == 2){
       //both players have locked in
       const blocked = choices[0] === choices[1]
       const attacker = match.players[match.attacker]
-      const defender = match.players.filter(
+      const defender = Object.values(match.players).filter(
         player => player.id !== match.attacker
       )[0]
       if(blocked){
         match.attacker = defender.id
       }else{
-        defender.hp -= choice === "0" ? 1 : 2
+        // game rule(s) lol
+        defender.hp -= attacker.choice === "0" ? 1 : 2
       }
       attacker.prevChoice = attacker.choice
       attacker.choice = null
