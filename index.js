@@ -51,7 +51,6 @@ const updateAndGarbageCollect = (clientId) => {
     }
   }
   if ((new Date()) - garbageCollectTimestamp > garbageCollectTimeout){
-    console.log("clear users")
     garbageCollectTimestamp = new Date()
     for (user of Object.values(users)){
       if ((new Date()) - user.lastSeen > garbageCollectTimeout){
@@ -72,25 +71,18 @@ app.get('/lobby/register/:name', function (req, res) {
   const { name } = req.params
   const user = newUser(name, clientId)
   users[user.id] = user
+  console.log('Registered ' + name)
   res.send({status: 200, data: user.id})
 })
 
 app.get('/lobby/challenge/:userId/:challengerId', function (req, res) {
   const { userId, challengerId } = req.params
   if(users[challengerId]){
-    users[challengerId].challenges.push(userId)
-    res.send({status: 200})
-  } else {
-    res.send({status: 400})
-  }
-})
-
-app.get('/lobby/accept/:userId/:challengerId', function (req, res) {
-  const { userId, challengerId } = req.params
-  if(users[userId] && users[challengerId]){
     const user = users[userId]
     const challenger = users[challengerId]
+    users[challengerId].challenges.push(userId)
     if (user.challenges.includes(challengerId) && challenger.match == null){
+      console.log('Match started')
       const matchId = uuid.v4()
       matches[matchId] = newMatch(userId, challengerId)
       user.match = matchId
@@ -106,8 +98,7 @@ app.get('/lobby/accept/:userId/:challengerId', function (req, res) {
 
 // Match
 app.get('/match/:matchId', function (req, res) {
-  // const clientId = req.headers.referer
-  // Todo check if user disconnected
+  const clientId = req.headers.referer
   const { matchId } = req.params
   if(matches[matchId]){
     const filteredPlayers = {}
@@ -126,6 +117,7 @@ app.get('/match/:matchId', function (req, res) {
   } else {
     res.send({status: 400})
   }
+  updateAndGarbageCollect(clientId)
 })
 
 const processTurn = (matchId) => {
