@@ -1,6 +1,7 @@
 const express = require('express')
 const app = express()
 const uuid =require('uuid')
+const { uniqueNamesGenerator, adjectives, names } = require('unique-names-generator');
 
 app.use(express.json())
 
@@ -43,6 +44,25 @@ const newMatch = (userId, challengerId) => ({
   }
 })
 
+const startMatch = (userId, challengerId) => {
+  console.log('Match started')
+  const matchId = uuid.v4()
+  const user = users[userId]
+  const challenger = users[challengerId]
+  matches[matchId] = newMatch(userId, challengerId)
+  user.match = matchId
+  challenger.match = matchId
+}
+
+const registerUser = (name, clientId) => {
+  const user = newUser(name, clientId)
+  users[user.id] = user
+  console.log('Registered ' + name)
+  return user.id
+}
+
+let waitingChallengers = []
+
 // Lobby
 const updateAndGarbageCollect = (clientId) => {
   for (let user of Object.values(users)){
@@ -69,10 +89,8 @@ app.get('/lobby/users', function (req, res) {
 app.get('/lobby/register/:name', function (req, res) {
   const clientId = req.headers.referer
   const { name } = req.params
-  const user = newUser(name, clientId)
-  users[user.id] = user
-  console.log('Registered ' + name)
-  res.send({status: 200, data: user.id})
+  const userId = registerUser(name, clientId)
+  res.send({status: 200, data: userId})
 })
 
 app.get('/lobby/challenge/:userId/:challengerId', function (req, res) {
@@ -94,6 +112,37 @@ app.get('/lobby/challenge/:userId/:challengerId', function (req, res) {
   } else {
     res.send({status: 400})
   }
+})
+
+app.get('/lobby/challenge/:userId/:challengerId', function (req, res) {
+  const { userId, challengerId } = req.params
+  if(users[challengerId]){
+    const user = users[userId]
+    const challenger = users[challengerId]
+    users[challengerId].challenges.push(userId)
+    if (user.challenges.includes(challengerId) && challenger.match == null){
+        startMatch(userId, challengerId)
+      res.send({status: 200})
+    }else{
+      res.send({status: 200})
+    }
+  } else {
+    res.send({status: 400})
+  }
+})
+
+app.get('/lobby/quickplay', function (req, res) {
+    const clientId = req.headers.referer
+    const name = uniqueNamesGenerator({ dictionaries: [adjectives, names], separator: ' ', style: 'capital'})
+
+    const userId = registerUser(name, clientId)
+    res.send({status: 200, data: userId})
+    if (waitingChallengers.length > 0) {
+      let challengerId = waitingChallengers.pop(waitingChallengers)
+      startMatch(userId, challengerId)
+    } else {
+      waitingChallengers.push(userId)
+    }
 })
 
 // Match
